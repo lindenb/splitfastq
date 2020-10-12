@@ -39,14 +39,18 @@ fprintf(out,"splitfastq. Pierre Lindenbaum 2020.\n");
 fprintf(out,"Usage:\n");
 fprintf(out,"  splitfastq -n (num) -m (modulo) <fastq1> \n");
 fprintf(out,"  splitfastq -n (num) -m (modulo) <fastq1> <fastq2> \n");
+fprintf(out,"other options:\n");
+fprintf(out,"  -B (int) buffer-size [%d]\n",BUFSIZ);
 fprintf(out,"\n");
 }
 
 int main(int argc,char** argv) {
     int opt;
+    int bufsize = BUFSIZ;
     long nsplits=0;
     long modulo = -1;
-    while ((opt = getopt(argc, argv, "hn:m:")) != -1) {
+    char* buffer=NULL;
+    while ((opt = getopt(argc, argv, "hn:m:B:")) != -1) {
 	    switch (opt) {
 	    case 'h':
 		    usage(stdout);
@@ -57,6 +61,9 @@ int main(int argc,char** argv) {
 	    case 'm':
 		    modulo =atol(optarg);
 		    break;
+	    case 'B':
+		    bufsize = atoi(optarg);
+		    break;
 	    case '?':
 		    fprintf(stderr,"unknown option '%c'.\n",(char)optopt);
 		    return EXIT_FAILURE;
@@ -65,23 +72,33 @@ int main(int argc,char** argv) {
 		    return EXIT_FAILURE;
 	    }
 	}
-
+    if(bufsize<1) {
+	fprintf(stderr,"Bad value for buffer-size : %d.\n",bufsize );
+	usage(stderr);
+	return EXIT_FAILURE;
+	}
     if(nsplits<=0)  {
-	fprintf(stderr,"Bad value for nsplit : %ld",nsplits );
+	fprintf(stderr,"Bad value for nsplit : %ld.\n",nsplits );
 	usage(stderr);
 	return EXIT_FAILURE;
         }
     if(modulo<0 || modulo>=nsplits)  {
-	fprintf(stderr,"Bad value for modulo : 0<=%ld<%ld",modulo,nsplits );
+	fprintf(stderr,"Bad value for modulo : 0<=%ld<%ld \n",modulo,nsplits );
 	usage(stderr);
 	return EXIT_FAILURE;
         }
+     buffer=(char*)malloc(sizeof(char)*bufsize);
+     if(buffer==NULL) {
+	fprintf(stderr,"Cannot alloc buffer size: %d.\n",bufsize );
+	return EXIT_FAILURE;
+	}
+     setbuf(stdout, buffer);
 
 #define OPENFQ(FP,KS,FNAME) \
 	FP = gzopen(FNAME, "r");\
 	if(FP==NULL) { fprintf(stderr,"Cannot open %s.(%s)\n",FNAME,strerror(errno)); exit(EXIT_FAILURE);}\
 	KS = kseq_init(FP);\
-	if(KS==NULL) { fprintf(stderr,"Cannot initialize reader for %s\n",FNAME); exit(EXIT_FAILURE);}
+	if(KS==NULL) { fprintf(stderr,"Cannot initialize reader for \"%s\".\n",FNAME); exit(EXIT_FAILURE);}
 
 #define NEXT nReads++; if(nReads%nsplits!=modulo) continue;
 
@@ -97,7 +114,8 @@ int main(int argc,char** argv) {
 	fputc('+',stdout);\
 	fputc('\n',stdout);\
 	KSWRITE(ks->qual);\
-	if(fputc('\n',stdout)==EOF) {fprintf(stderr,"IO error\n");exit(EXIT_FAILURE);}
+	fputc('\n',stdout);\
+	if(ferror(stdout)) {fprintf(stderr,"[splitfastq]I/O error\n");exit(EXIT_FAILURE);}
 
 
 
@@ -146,6 +164,6 @@ int main(int argc,char** argv) {
 		usage(stderr);
 		return EXIT_FAILURE;
 		}
-
+     free(buffer);
      return EXIT_SUCCESS;
      }

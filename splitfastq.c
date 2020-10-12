@@ -29,6 +29,7 @@ THE SOFTWARE.
 #include <unistd.h>
 #include <assert.h>
 #include <getopt.h>
+#include "signal.h"
 #include <zlib.h>
 #include "htslib/kseq.h"
 
@@ -94,6 +95,7 @@ int main(int argc,char** argv) {
 	}
      setbuf(stdout, buffer);
 
+
 #define OPENFQ(FP,KS,FNAME) \
 	FP = gzopen(FNAME, "r");\
 	if(FP==NULL) { fprintf(stderr,"Cannot open %s.(%s)\n",FNAME,strerror(errno)); exit(EXIT_FAILURE);}\
@@ -114,8 +116,7 @@ int main(int argc,char** argv) {
 	fputc('+',stdout);\
 	fputc('\n',stdout);\
 	KSWRITE(ks->qual);\
-	fputc('\n',stdout);\
-	if(ferror(stdout)) {fprintf(stderr,"[splitfastq]I/O error\n");exit(EXIT_FAILURE);}
+	if(fputc('\n',stdout)==EOF || ferror(stdout)) {fprintf(stderr,"[splitfastq]I/O error\n");exit(EXIT_FAILURE);}
 
 
 

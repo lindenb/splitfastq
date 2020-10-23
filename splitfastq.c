@@ -29,6 +29,7 @@ THE SOFTWARE.
 #include <unistd.h>
 #include <assert.h>
 #include <getopt.h>
+#include <stdint.h>
 #include "signal.h"
 #include <zlib.h>
 #include "htslib/kseq.h"

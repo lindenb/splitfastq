@@ -2,3 +2,4 @@ jeter*
 *.o
 *~
 splitfastq
+split2file
